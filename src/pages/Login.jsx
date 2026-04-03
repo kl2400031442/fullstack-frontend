@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import './Auth.css';
 
 export default function Login() {
-  const { loginStudent, loginTeacher, verifyMfa, mfaPending } = useAuth();
+  const { loginStudent, loginTeacher, verifyMfa, mfaPending, mfaCode } = useAuth();
   const navigate = useNavigate();
 
   const [role, setRole] = useState('student');
@@ -12,8 +12,8 @@ export default function Login() {
   const [teacherForm, setTeacherForm] = useState({ teacherCode: '', password: '' });
   const [mfaInput, setMfaInput] = useState('');
   const [errors, setErrors] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // ─── Student validation ───
   const validateStudent = () => {
     const errs = {};
     const val = studentForm.nameOrId.trim();
@@ -23,7 +23,6 @@ export default function Login() {
     return errs;
   };
 
-  // ─── Teacher validation ───
   const validateTeacher = () => {
     const errs = {};
     if (!teacherForm.teacherCode) errs.teacherCode = 'Teacher Code is required';
@@ -33,54 +32,76 @@ export default function Login() {
     return errs;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (role === 'student') {
       const errs = validateStudent();
-      if (Object.keys(errs).length) { setErrors(errs); return; }
+      if (Object.keys(errs).length) {
+        setErrors(errs);
+        return;
+      }
 
-      const val = studentForm.nameOrId.trim();
-      const isId = /^\d{10}$/.test(val);
-      loginStudent({
-        name: isId ? '' : val,
-        studentId: isId ? val : '',
-        password: studentForm.password,
-      });
-      navigate('/student-dashboard');
+      try {
+        setIsSubmitting(true);
+        const val = studentForm.nameOrId.trim();
+        const isId = /^\d{10}$/.test(val);
+        await loginStudent({
+          name: isId ? '' : val,
+          studentId: isId ? val : '',
+          password: studentForm.password,
+        });
+        navigate('/student-dashboard');
+      } catch (error) {
+        setErrors({ submit: error.message || 'Login failed. Please try again.' });
+      } finally {
+        setIsSubmitting(false);
+      }
     } else {
       const errs = validateTeacher();
-      if (Object.keys(errs).length) { setErrors(errs); return; }
+      if (Object.keys(errs).length) {
+        setErrors(errs);
+        return;
+      }
 
-      loginTeacher({
-        teacherCode: teacherForm.teacherCode,
-        password: teacherForm.password,
-      });
-      // MFA screen will show automatically
+      try {
+        setIsSubmitting(true);
+        await loginTeacher({
+          teacherCode: teacherForm.teacherCode,
+          password: teacherForm.password,
+        });
+      } catch (error) {
+        setErrors({ submit: error.message || 'Login failed. Please try again.' });
+      } finally {
+        setIsSubmitting(false);
+      }
     }
   };
 
-  const handleMfaSubmit = (e) => {
+  const handleMfaSubmit = async (e) => {
     e.preventDefault();
     if (!mfaInput.trim()) {
       setErrors({ mfa: 'Please enter the 6-digit code' });
       return;
     }
-    const result = verifyMfa(mfaInput.trim());
-    if (result.success) {
+
+    try {
+      setIsSubmitting(true);
+      await verifyMfa(mfaInput.trim());
       navigate('/teacher-dashboard');
-    } else {
-      setErrors({ mfa: result.error });
+    } catch (error) {
+      setErrors({ mfa: error.message || 'Invalid MFA code. Please try again.' });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const handleChange = (formType, field, value) => {
     if (formType === 'student') setStudentForm((p) => ({ ...p, [field]: value }));
     else setTeacherForm((p) => ({ ...p, [field]: value }));
-    if (errors[field]) setErrors((p) => ({ ...p, [field]: '' }));
+    if (errors[field] || errors.submit) setErrors((p) => ({ ...p, [field]: '', submit: '' }));
   };
 
-  // ─── MFA Screen ───
   if (mfaPending) {
     return (
       <div className="auth-page">
@@ -97,7 +118,10 @@ export default function Login() {
               </div>
               <div className="mfa-icon">🔐</div>
               <h2>Two-Factor Authentication</h2>
-              <p>A 6-digit verification code has been generated.<br /><strong>Check your browser console (F12)</strong> for the code.</p>
+              <p>
+                Enter the 6-digit verification code from your authenticator workflow.
+                {mfaCode ? <><br /><strong>Dev code: {mfaCode}</strong></> : null}
+              </p>
             </div>
             <form className="auth-form" onSubmit={handleMfaSubmit}>
               <div className="form-group">
@@ -117,8 +141,8 @@ export default function Login() {
                 />
                 {errors.mfa && <span className="form-error">{errors.mfa}</span>}
               </div>
-              <button type="submit" className="auth-submit-btn">
-                Verify & Continue
+              <button type="submit" className="auth-submit-btn" disabled={isSubmitting}>
+                {isSubmitting ? 'Verifying...' : 'Verify & Continue'}
               </button>
             </form>
           </div>
@@ -127,7 +151,6 @@ export default function Login() {
     );
   }
 
-  // ─── Login Screen ───
   return (
     <div className="auth-page">
       <div className="auth-container">
@@ -145,19 +168,24 @@ export default function Login() {
             <p>Select your role and log in</p>
           </div>
 
-          {/* Role Toggle */}
           <div className="auth-role-picker" style={{ marginBottom: 'var(--space-6)' }}>
             <button
               type="button"
               className={`auth-role-btn ${role === 'student' ? 'active' : ''}`}
-              onClick={() => { setRole('student'); setErrors({}); }}
+              onClick={() => {
+                setRole('student');
+                setErrors({});
+              }}
             >
               🎓 Student
             </button>
             <button
               type="button"
               className={`auth-role-btn ${role === 'teacher' ? 'active' : ''}`}
-              onClick={() => { setRole('teacher'); setErrors({}); }}
+              onClick={() => {
+                setRole('teacher');
+                setErrors({});
+              }}
             >
               👩‍🏫 Teacher
             </button>
@@ -220,8 +248,10 @@ export default function Login() {
               </>
             )}
 
-            <button type="submit" className="auth-submit-btn">
-              {role === 'student' ? 'Log In' : 'Verify & Get MFA Code'}
+            {errors.submit && <span className="form-error">{errors.submit}</span>}
+
+            <button type="submit" className="auth-submit-btn" disabled={isSubmitting}>
+              {isSubmitting ? 'Please wait...' : role === 'student' ? 'Log In' : 'Verify & Get MFA Code'}
             </button>
           </form>
 
