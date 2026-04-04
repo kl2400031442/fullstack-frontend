@@ -21,15 +21,27 @@ export default function Signup() {
     return errs;
   };
 
-  const handleSubmit = (e) => {
+  const [submitError, setSubmitError] = useState('');
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
     const errs = validate();
     if (Object.keys(errs).length > 0) {
       setErrors(errs);
       return;
     }
-    signup({ name: form.name.trim(), email: form.email, role: form.role });
-    navigate('/dashboard');
+    try {
+      setSubmitError('');
+      await signup({
+        name: form.name.trim(),
+        email: form.email.trim(),
+        password: form.password,
+        role: form.role,
+      });
+      navigate(form.role === 'teacher' ? '/teacher-dashboard' : '/student-dashboard');
+    } catch (error) {
+      setSubmitError(error.message || 'Signup failed. Please try again.');
+    }
   };
 
   const handleChange = (field, value) => {
@@ -127,6 +139,8 @@ export default function Signup() {
               />
               {errors.confirmPassword && <span className="form-error">{errors.confirmPassword}</span>}
             </div>
+
+            {submitError && <span className="form-error">{submitError}</span>}
 
             <button type="submit" className="auth-submit-btn">
               Create Account
