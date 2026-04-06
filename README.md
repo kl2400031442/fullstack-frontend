@@ -1,46 +1,90 @@
-# PeerCollab Frontend
+# PeerCollab (Frontend + Backend)
 
-A Vite + React frontend for a peer-collaboration classroom platform.
+This repository now includes:
 
-## Backend connection
+* **Frontend**: React + Vite app
+* **Backend**: Node.js + Express + MySQL API
 
-This app now supports backend API integration for:
+---
 
-- Student/teacher login
-- Teacher MFA verification
-- User signup
-- Fetching projects
-- Creating new assignments
+## Backend features
 
-### 1) Configure environment
+* Signup & Login APIs
+* Projects APIs
+* MySQL database connection
+* Clean folder structure
 
-Create a `.env` file in the project root:
+---
 
-```bash
-VITE_API_BASE_URL=http://localhost:5000/api
+## Backend Setup
+
+### 1) Create MySQL Database
+
+```sql
+CREATE DATABASE peercollab;
+USE peercollab;
+
+CREATE TABLE users (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(120),
+  email VARCHAR(190) UNIQUE,
+  password VARCHAR(255),
+  role VARCHAR(50)
+);
+
+CREATE TABLE projects (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  title VARCHAR(180),
+  description TEXT
+);
 ```
 
-### 2) Expected API routes
+---
 
-- `POST /auth/login/student`
-- `POST /auth/login/teacher`
-- `POST /auth/verify-mfa`
-- `POST /auth/signup`
-- `GET /projects`
-- `POST /projects`
+### 2) Setup Backend
 
-If `/projects` is unavailable, the UI falls back to demo data and shows a warning banner.
+```bash
+cd backend
+npm install
+```
 
-## Run locally
+---
+
+### 3) Run Backend
+
+```bash
+node server.js
+```
+
+Backend runs at:
+http://localhost:5000
+
+---
+
+## Frontend Setup
 
 ```bash
 npm install
 npm run dev
 ```
 
-## Quality checks
+Frontend runs at:
+http://localhost:5173
+
+---
+
+## API Base URL
+
+Create `.env` file in root:
 
 ```bash
-npm run lint
-npm run build
+VITE_API_BASE_URL=http://localhost:5000/api
 ```
+
+---
+
+## Done 🎉
+
+* Signup works
+* Login works
+* Projects fetch works

@@ -38,10 +38,11 @@ export function AuthProvider({ children }) {
   const [token, setToken] = useState(() => localStorage.getItem(TOKEN_KEY) || '');
 
   const loginStudent = async ({ name, studentId, password }) => {
-    const response = await apiRequest('/auth/login/student', {
-      method: 'POST',
-      body: { name, studentId, password },
-    });
+
+   const response = await apiRequest('/auth/login', {
+  method: 'POST',
+  body: { role: 'student', name, studentId, password },
+});
 
     const nextUser = normalizeUser(response?.user, {
       name: name || `Student ${studentId}`,
@@ -61,10 +62,10 @@ export function AuthProvider({ children }) {
   };
 
   const loginTeacher = async ({ teacherCode, password }) => {
-    const response = await apiRequest('/auth/login/teacher', {
-      method: 'POST',
-      body: { teacherCode, password },
-    });
+const response = await apiRequest('/auth/login', {
+  method: 'POST',
+  body: { role: 'teacher', teacherCode, password },
+});
 
     const pendingCode = response?.mfaCode || '';
     const pendingToken = response?.mfaToken || '';
