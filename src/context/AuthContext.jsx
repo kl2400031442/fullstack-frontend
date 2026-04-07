@@ -1,88 +1,185 @@
+/* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useState } from 'react';
+import { apiRequest } from '../services/apiClient';
 
 const AuthContext = createContext(null);
+const TOKEN_KEY = 'peercollab_token';
+
+function getInitials(name = '') {
+  return name
+    .split(' ')
+    .filter(Boolean)
+    .map((w) => w[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2) || 'PC';
+}
+
+function normalizeUser(user, fallback = {}) {
+  const name = user?.name || fallback.name || 'User';
+  const role = user?.role || fallback.role || 'student';
+
+  return {
+    id: user?.id || fallback.id || Date.now(),
+    name,
+    identifier: user?.identifier || fallback.identifier || user?.email || '',
+    role,
+    avatar: user?.avatar || getInitials(name),
+    department: user?.department || 'Computer Science',
+  };
+}
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [mfaPending, setMfaPending] = useState(false);
   const [mfaCode, setMfaCode] = useState('');
+  const [mfaToken, setMfaToken] = useState('');
 
-  const getInitials = (name) =>
-    name
-      .split(' ')
-      .map((w) => w[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2);
+  const [token, setToken] = useState(() => localStorage.getItem(TOKEN_KEY) || '');
 
-  // Student login — accepts name or studentId + password
-  const loginStudent = ({ name, studentId, password }) => {
-    const displayName = name || `Student ${studentId}`;
-    setUser({
-      id: Date.now(),
-      name: displayName,
+  const loginStudent = async ({ name, studentId, password }) => {
+    const response = await apiRequest('/auth/login', {
+      method: 'POST',
+      body: { role: 'student', name, studentId, password },
+    });
+
+    const nextUser = normalizeUser(response?.user, {
+      name: name || `Student ${studentId}`,
       identifier: name || studentId,
       role: 'student',
-      avatar: getInitials(displayName),
-      department: 'Computer Science',
     });
+
+    setUser(nextUser);
     setMfaPending(false);
-    return { success: true };
+
+    if (response?.token) {
+      localStorage.setItem(TOKEN_KEY, response.token);
+      setToken(response.token);
+    }
+
+    return { success: true, role: 'student' };
   };
 
-  // Teacher login step 1 — verify code + password, then trigger MFA
-  const loginTeacher = ({ teacherCode, password }) => {
-    // Generate a mock 6-digit MFA code
-    const code = String(Math.floor(100000 + Math.random() * 900000));
-    console.log(`%c[MFA CODE]: ${code}`, 'color: #6366f1; font-weight: bold; font-size: 16px;');
-    setMfaCode(code);
-    setMfaPending(true);
-    // Temporarily store teacher info
-    setUser({
-      id: Date.now(),
-      name: `Teacher ${teacherCode}`,
-      identifier: teacherCode,
-      role: 'teacher',
-      avatar: 'T' + teacherCode.slice(-1),
-      department: 'Computer Science',
-      _pendingMfa: true,
+  const loginTeacher = async ({ teacherCode, password }) => {
+    const response = await apiRequest('/auth/login', {
+      method: 'POST',
+      body: { role: 'teacher', teacherCode, password },
     });
+
+    const pendingCode = response?.mfaCode || '';
+    const pendingToken = response?.mfaToken || '';
+
+    setMfaCode(pendingCode);
+    setMfaToken(pendingToken);
+    setMfaPending(true);
+
+    setUser(
+      normalizeUser(response?.user, {
+        name: `Teacher ${teacherCode}`,
+        identifier: teacherCode,
+        role: 'teacher',
+      }),
+    );
+
+    if (pendingCode) {
+      // Helpful in local/dev environments.
+      console.log(`%c[MFA CODE]: ${pendingCode}`, 'color: #6366f1; font-weight: bold; font-size: 16px;');
+    }
+
     return { success: true, mfaRequired: true };
   };
 
-  // MFA verification step 2
-  const verifyMfa = (enteredCode) => {
-    if (enteredCode === mfaCode) {
-      setMfaPending(false);
-      setMfaCode('');
-      setUser((prev) => ({ ...prev, _pendingMfa: false }));
-      return { success: true };
+
+  const loginAdmin = async ({ email, password }) => {
+    const response = await apiRequest('/auth/login', {
+      method: 'POST',
+      body: { role: 'admin', email, password },
+    });
+
+    const nextUser = normalizeUser(response?.user, {
+      name: email,
+      identifier: email,
+      role: 'admin',
+    });
+
+    setUser(nextUser);
+    setMfaPending(false);
+
+    if (response?.token) {
+      localStorage.setItem(TOKEN_KEY, response.token);
+      setToken(response.token);
     }
-    return { success: false, error: 'Invalid MFA code. Please try again.' };
+
+    return { success: true, role: 'admin' };
+  };
+
+  const verifyMfa = async (enteredCode) => {
+    const response = await apiRequest('/auth/verify-mfa', {
+      method: 'POST',
+      body: { code: enteredCode, mfaToken },
+    });
+
+    setMfaPending(false);
+    setMfaCode('');
+    setMfaToken('');
+    setUser((prev) => normalizeUser(response?.user, prev));
+
+    if (response?.token) {
+      localStorage.setItem(TOKEN_KEY, response.token);
+      setToken(response.token);
+    }
+
+    return { success: true };
+  };
+
+  const signup = async ({ name, email, password, role }) => {
+    const response = await apiRequest('/auth/signup', {
+      method: 'POST',
+      body: { name, email, password, role },
+    });
+
+    const nextUser = normalizeUser(response?.user, { name, identifier: email, role });
+    setUser(nextUser);
+
+    if (response?.token) {
+      localStorage.setItem(TOKEN_KEY, response.token);
+      setToken(response.token);
+    }
+
+    return { success: true };
   };
 
   const logout = () => {
     setUser(null);
     setMfaPending(false);
     setMfaCode('');
+    setMfaToken('');
+    localStorage.removeItem(TOKEN_KEY);
+    setToken('');
   };
 
-  const isAuthenticated = !!user && !user._pendingMfa;
-  const isTeacher = user?.role === 'teacher' && !user._pendingMfa;
+  const isAuthenticated = !!user && !mfaPending;
+  const isTeacher = user?.role === 'teacher' && !mfaPending;
   const isStudent = user?.role === 'student';
+  const isAdmin = user?.role === 'admin';
 
   return (
     <AuthContext.Provider
       value={{
         user,
+        token,
         loginStudent,
         loginTeacher,
+        loginAdmin,
         verifyMfa,
+        signup,
         logout,
         isAuthenticated,
         isTeacher,
         isStudent,
+        isAdmin,
         mfaPending,
+        mfaCode,
       }}
     >
       {children}

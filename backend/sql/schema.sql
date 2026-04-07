@@ -1,22 +1,3 @@
-# PeerCollab LMS (React + Node.js + MySQL)
-
-This project now supports a complete LMS flow for **student**, **teacher**, and **admin** roles.
-
-## Core LMS APIs
-
-- `POST /api/auth/signup`
-- `POST /api/auth/login`
-- `POST /api/auth/verify-mfa`
-- `GET /api/projects` (student gets only assigned tasks)
-- `POST /api/projects` (teacher/admin create + assign tasks)
-- `POST /api/submissions` (student upload)
-- `GET /api/submissions` (teacher/admin)
-- `PUT /api/submissions/:id/review` (teacher/admin)
-- `GET /api/completed` (student completed courses)
-
-## SQL queries (required tables)
-
-```sql
 CREATE DATABASE IF NOT EXISTS peercollab;
 USE peercollab;
 
@@ -85,38 +66,3 @@ CREATE TABLE IF NOT EXISTS completed_courses (
   CONSTRAINT fk_cc_student FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE,
   CONSTRAINT fk_cc_project FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
 );
-```
-
-## Run backend locally (step-by-step)
-
-1. **Create tables in MySQL** by running `backend/sql/schema.sql`.
-2. **Configure env**:
-   ```bash
-   cd backend
-   cp .env.example .env
-   ```
-   Fill DB credentials and JWT secret.
-3. **Install backend dependencies**:
-   ```bash
-   npm install
-   ```
-4. **Start backend**:
-   ```bash
-   npm run dev
-   ```
-5. **Check API health**:
-   ```bash
-   curl http://localhost:5000/api/health
-   ```
-
-## Run frontend
-
-1. Create root `.env`:
-   ```bash
-   VITE_API_BASE_URL=http://localhost:5000/api
-   ```
-2. Start frontend:
-   ```bash
-   npm install
-   npm run dev
-   ```

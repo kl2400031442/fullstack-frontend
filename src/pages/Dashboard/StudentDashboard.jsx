@@ -1,116 +1,102 @@
+import { useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import AnalyticsCard from '../../components/AnalyticsCard/AnalyticsCard';
-import ProjectCard from '../../components/ProjectCard/ProjectCard';
+import { fetchCompletedCourses, fetchMyTasks, uploadSubmission } from '../../services/lmsService';
 import './Dashboard.css';
 
-const studentStats = [
-    { title: 'My Projects', value: '5', icon: '📁', color: 'primary', trend: 0, subtitle: 'assigned to you' },
-    { title: 'Completed', value: '3', icon: '✅', color: 'success', trend: 15, subtitle: 'submissions done' },
-    { title: 'Peer Reviews', value: '7', icon: '📝', color: 'warning', trend: 10, subtitle: 'given & received' },
-    { title: 'Avg. Grade', value: '91%', icon: '🏆', color: 'danger', trend: 4, subtitle: 'your average' },
-];
-
-const myProjects = [
-    {
-        id: 1,
-        title: 'Database Design Project',
-        description: 'Design a normalized relational database for an e-commerce platform with ER diagrams and SQL schemas.',
-        status: 'active',
-        dueDate: 'Mar 15, 2026',
-        submissions: 28,
-        progress: 65,
-        icon: '🗄️',
-        color: 'linear-gradient(135deg, #6366f1, #4f46e5)',
-        team: ['Maria Garcia', 'James Wilson', 'Priya Sharma'],
-    },
-    {
-        id: 2,
-        title: 'React Dashboard App',
-        description: 'Build a responsive analytics dashboard using React.js with real-time data visualization.',
-        status: 'active',
-        dueDate: 'Mar 22, 2026',
-        submissions: 15,
-        progress: 40,
-        icon: '⚛️',
-        color: 'linear-gradient(135deg, #06b6d4, #0891b2)',
-        team: ['Chen Wei', 'Sarah Kim'],
-    },
-    {
-        id: 3,
-        title: 'API Security Analysis',
-        description: 'Analyze security vulnerabilities in REST APIs with proposed mitigation strategies.',
-        status: 'pending',
-        dueDate: 'Apr 1, 2026',
-        submissions: 0,
-        progress: 10,
-        icon: '🔒',
-        color: 'linear-gradient(135deg, #f97316, #ea580c)',
-        team: ['Lisa Anderson'],
-    },
-];
-
-const recentActivity = [
-    { id: 1, text: 'You submitted Database Design Project', time: '2 hours ago', icon: '📤', color: '#22c55e' },
-    { id: 2, text: 'Maria Garcia completed peer review for your submission', time: '3 hours ago', icon: '📝', color: '#6366f1' },
-    { id: 3, text: 'New assignment "API Security Analysis" received', time: '5 hours ago', icon: '📁', color: '#f97316' },
-    { id: 4, text: 'Peer review deadline extended for Database Project', time: '1 day ago', icon: '⏰', color: '#ef4444' },
-];
+const statusClass = {
+  Pending: 'badge-warning',
+  Submitted: 'badge-info',
+  Reviewed: 'badge-primary',
+  Completed: 'badge-success',
+};
 
 export default function StudentDashboard() {
-    const { user } = useAuth();
+  const { user, token } = useAuth();
+  const [tasks, setTasks] = useState([]);
+  const [completedCourses, setCompletedCourses] = useState([]);
+  const [uploadingId, setUploadingId] = useState(null);
+  const [error, setError] = useState('');
 
-    return (
-        <div className="dashboard-page">
-            <div className="dashboard-welcome">
-                <div className="welcome-content">
-                    <h2>Welcome, {user?.name || 'Student'}! 👋</h2>
-                    <p>Here's your learning progress and upcoming tasks.</p>
-                </div>
-                <div className="welcome-date">
-                    <span>{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</span>
-                </div>
-            </div>
+  useEffect(() => {
+    async function load() {
+      try {
+        const [taskResponse, completedResponse] = await Promise.all([
+          fetchMyTasks(token),
+          fetchCompletedCourses(token),
+        ]);
+        setTasks(taskResponse.projects || []);
+        setCompletedCourses(completedResponse.completedCourses || []);
+      } catch (loadError) {
+        setError(loadError.message || 'Failed to load student dashboard data.');
+      }
+    }
+    load();
+  }, [token]);
 
-            <div className="analytics-grid">
-                {studentStats.map((stat, i) => (
-                    <AnalyticsCard key={i} {...stat} />
-                ))}
-            </div>
+  const handleUpload = async (taskId, file) => {
+    if (!file) return;
+    try {
+      setUploadingId(taskId);
+      await uploadSubmission({ projectId: taskId, fileUrl: file.name }, token);
+      setTasks((prev) => prev.map((task) => (task.id === taskId ? { ...task, status: 'Submitted' } : task)));
+    } catch (uploadError) {
+      setError(uploadError.message || 'Upload failed');
+    } finally {
+      setUploadingId(null);
+    }
+  };
 
-            <div className="dashboard-content">
-                <div className="dashboard-section">
-                    <div className="section-header">
-                        <div>
-                            <h3 className="section-title">My Projects</h3>
-                            <p className="section-subtitle">Your current assignments</p>
-                        </div>
-                    </div>
-                    <div className="projects-grid">
-                        {myProjects.map((project) => (
-                            <ProjectCard key={project.id} project={project} isTeacher={false} />
-                        ))}
-                    </div>
-                </div>
-
-                <div className="dashboard-activity">
-                    <div className="section-header">
-                        <h3 className="section-title">Recent Activity</h3>
-                    </div>
-                    <div className="activity-feed card">
-                        {recentActivity.map((item) => (
-                            <div key={item.id} className="activity-item">
-                                <div className="activity-icon" style={{ backgroundColor: item.color + '18', color: item.color }}>
-                                    {item.icon}
-                                </div>
-                                <div className="activity-info">
-                                    <p className="activity-text">{item.text}</p>
-                                    <span className="activity-time">{item.time}</span>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </div>
+  return (
+    <div className="dashboard-page">
+      <div className="dashboard-welcome">
+        <div className="welcome-content">
+          <h2>Welcome, {user?.name || 'Student'}! 👋</h2>
+          <p>Your personalized LMS dashboard.</p>
         </div>
-    );
+      </div>
+
+      {error && <div className="card" style={{ color: 'var(--danger)' }}>{error}</div>}
+
+      <div className="dashboard-section card" style={{ marginBottom: 'var(--space-6)' }}>
+        <h3 className="section-title">My Assigned Tasks</h3>
+        <div className="assignment-list">
+          {tasks.map((task) => (
+            <div key={task.id} className="assignment-item card">
+              <div>
+                <h4>{task.title}</h4>
+                <p>{task.description}</p>
+                <p>Due: {task.dueDate || 'TBD'}</p>
+                <span className={`badge ${statusClass[task.status] || 'badge-warning'}`}>{task.status || 'Pending'}</span>
+              </div>
+              <label className="btn btn-primary btn-sm" style={{ cursor: 'pointer' }}>
+                {uploadingId === task.id ? 'Uploading...' : 'Upload File'}
+                <input
+                  type="file"
+                  style={{ display: 'none' }}
+                  disabled={uploadingId === task.id}
+                  onChange={(e) => handleUpload(task.id, e.target.files?.[0])}
+                />
+              </label>
+            </div>
+          ))}
+          {tasks.length === 0 && <p>No assigned tasks yet.</p>}
+        </div>
+      </div>
+
+      <div className="dashboard-section card">
+        <h3 className="section-title">Completed Courses</h3>
+        {completedCourses.length === 0 ? (
+          <p>No completed courses yet.</p>
+        ) : (
+          <ul>
+            {completedCourses.map((course) => (
+              <li key={course.id}>
+                ✅ {course.title} — {new Date(course.completed_at).toLocaleDateString()}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </div>
+  );
 }
