@@ -8,6 +8,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 
 import StudentDashboard from "./pages/Dashboard/StudentDashboard";
 import TeacherDashboard from "./pages/Dashboard/TeacherDashboard";
+import AdminDashboard from "./pages/Dashboard/AdminDashboard";
 import Projects from "./pages/Projects/Projects";
 import Reviews from "./pages/Reviews/Reviews";
 import Collaboration from "./pages/Collaboration/Collaboration";
@@ -46,6 +47,14 @@ function AppLayout() {
               element={
                 <ProtectedRoute allowedRole="teacher">
                   <TeacherDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin-dashboard"
+              element={
+                <ProtectedRoute allowedRole="admin">
+                  <AdminDashboard />
                 </ProtectedRoute>
               }
             />

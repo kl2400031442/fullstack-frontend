@@ -17,9 +17,12 @@ export function protect(req, res, next) {
   }
 }
 
-export function teacherOnly(req, res, next) {
-  if (req.user?.role !== 'teacher') {
-    return res.status(403).json({ message: 'Only teachers can perform this action.' });
+export function teacherOrAdminOnly(req, res, next) {
+  if (!['teacher', 'admin'].includes(req.user?.role)) {
+    return res.status(403).json({ message: 'Only teachers/admins can perform this action.' });
+  }
+  next();
+}
   }
   return next();
 }

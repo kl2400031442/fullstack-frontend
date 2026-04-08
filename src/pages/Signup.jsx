@@ -38,7 +38,13 @@ export default function Signup() {
         password: form.password,
         role: form.role,
       });
-      navigate(form.role === 'teacher' ? '/teacher-dashboard' : '/student-dashboard');
+navigate(
+  form.role === 'teacher'
+    ? '/teacher-dashboard'
+    : form.role === 'admin'
+    ? '/admin-dashboard'
+    : '/student-dashboard'
+);
     } catch (error) {
       setSubmitError(error.message || 'Signup failed. Please try again.');
     }
@@ -112,6 +118,13 @@ export default function Signup() {
                   onClick={() => handleChange('role', 'teacher')}
                 >
                   👩‍🏫 Teacher
+                </button>
+                <button
+                  type="button"
+                  className={`auth-role-btn ${form.role === 'admin' ? 'active' : ''}`}
+                  onClick={() => handleChange('role', 'admin')}
+                >
+                  🛠️ Admin
                 </button>
               </div>
             </div>

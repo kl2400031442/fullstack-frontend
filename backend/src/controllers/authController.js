@@ -93,6 +93,27 @@ export const login = asyncHandler(async (req, res) => {
     return res.json({ token, user: mapUser(user) });
   }
 
+if (role === 'admin') {
+  const [admins] = await pool.query(
+    `SELECT * FROM users WHERE role = 'admin' AND email = ? LIMIT 1`,
+    [req.body.email || ''],
+  );
+  const adminUser = admins[0];
+
+  if (!adminUser) {
+    res.status(401);
+    throw new Error('Invalid credentials');
+  }
+
+  const ok = await bcrypt.compare(password, adminUser.password_hash);
+  if (!ok) {
+    res.status(401);
+    throw new Error('Invalid credentials');
+  }
+
+  const token = signAuthToken(adminUser);
+  return res.json({ token, user: mapUser(adminUser) });
+}
   if (role === 'teacher') {
     user = await findAndValidateTeacher({ teacherCode, password });
     if (!user) {
@@ -118,8 +139,7 @@ export const login = asyncHandler(async (req, res) => {
   }
 
   res.status(400);
-  throw new Error('Invalid role. Use student or teacher.');
-});
+throw new Error('Invalid role. Use student, teacher, or admin.');
 
 export const verifyMfa = asyncHandler(async (req, res) => {
   const { code, mfaToken } = req.body;

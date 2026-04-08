@@ -1,90 +1,92 @@
-# PeerCollab (Frontend + Backend)
+# PeerCollab LMS (React + Node.js + MySQL)
 
-This repository now includes:
+This project supports a complete LMS system for:
 
-* **Frontend**: React + Vite app
-* **Backend**: Node.js + Express + MySQL API
-
----
-
-## Backend features
-
-* Signup & Login APIs
-* Projects APIs
-* MySQL database connection
-* Clean folder structure
+* 👨‍🎓 Students
+* 👨‍🏫 Teachers
+* 👑 Admin
 
 ---
 
-## Backend Setup
+## 🔥 Features
 
-### 1) Create MySQL Database
+### Student Dashboard
 
-```sql
-CREATE DATABASE peercollab;
-USE peercollab;
+* View assigned tasks
+* Upload files
+* Status:
 
-CREATE TABLE users (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  name VARCHAR(120),
-  email VARCHAR(190) UNIQUE,
-  password VARCHAR(255),
-  role VARCHAR(50)
-);
-
-CREATE TABLE projects (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  title VARCHAR(180),
-  description TEXT
-);
-```
+  * Pending
+  * Submitted
+  * Reviewed
+  * Completed
+* Completed Courses section
 
 ---
 
-### 2) Setup Backend
+### Teacher Dashboard
+
+* View student submissions
+* Review files
+* Add comments
+* Mark as reviewed/completed
+
+---
+
+### Admin Dashboard
+
+* Create tasks
+* Assign tasks to students
+
+---
+
+## 🗄️ Database Tables
+
+* users
+* projects
+* project_assignments
+* submissions
+* completed_courses
+
+---
+
+## 🚀 Backend Run
 
 ```bash
 cd backend
 npm install
+npm run dev
 ```
 
 ---
 
-### 3) Run Backend
-
-```bash
-node server.js
-```
-
-Backend runs at:
-http://localhost:5000
-
----
-
-## Frontend Setup
+## 🌐 Frontend Run
 
 ```bash
 npm install
 npm run dev
 ```
 
-Frontend runs at:
-http://localhost:5173
-
 ---
 
-## API Base URL
+## 🔗 API Base URL
 
-Create `.env` file in root:
-
-```bash
+```env
 VITE_API_BASE_URL=http://localhost:5000/api
 ```
 
 ---
 
-## Done 🎉
+## 🎯 Final Flow
 
-* Signup works
-* Login works
-* Projects fetch works
+Student → Upload → Submitted
+Teacher → Review → Completed
+Admin → Assign Tasks
+
+---
+
+## 🎉 Project Ready
+
+* Full LMS system
+* Role-based dashboards
+* File upload + review system

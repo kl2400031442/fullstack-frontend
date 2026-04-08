@@ -34,62 +34,84 @@ export function AuthProvider({ children }) {
   const [mfaPending, setMfaPending] = useState(false);
   const [mfaCode, setMfaCode] = useState('');
   const [mfaToken, setMfaToken] = useState('');
+const [token, setToken] = useState(() => localStorage.getItem(TOKEN_KEY) || '');
 
-  const [token, setToken] = useState(() => localStorage.getItem(TOKEN_KEY) || '');
+// STUDENT LOGIN
+const loginStudent = async ({ name, studentId, password }) => {
+  const response = await apiRequest('/auth/login', {
+    method: 'POST',
+    body: { role: 'student', name, studentId, password },
+  });
 
-  const loginStudent = async ({ name, studentId, password }) => {
+  const nextUser = normalizeUser(response?.user, {
+    name: name || `Student ${studentId}`,
+    identifier: name || studentId,
+    role: 'student',
+  });
 
-   const response = await apiRequest('/auth/login', {
-  method: 'POST',
-  body: { role: 'student', name, studentId, password },
-});
+  setUser(nextUser);
+  setMfaPending(false);
 
-    const nextUser = normalizeUser(response?.user, {
-      name: name || `Student ${studentId}`,
-      identifier: name || studentId,
-      role: 'student',
-    });
+  if (response?.token) {
+    localStorage.setItem(TOKEN_KEY, response.token);
+    setToken(response.token);
+  }
 
-    setUser(nextUser);
-    setMfaPending(false);
+  return { success: true, role: 'student' };
+};
 
-    if (response?.token) {
-      localStorage.setItem(TOKEN_KEY, response.token);
-      setToken(response.token);
-    }
+// TEACHER LOGIN
+const loginTeacher = async ({ teacherCode, password }) => {
+  const response = await apiRequest('/auth/login', {
+    method: 'POST',
+    body: { role: 'teacher', teacherCode, password },
+  });
 
-    return { success: true, role: 'student' };
-  };
+  const pendingCode = response?.mfaCode || '';
+  const pendingToken = response?.mfaToken || '';
 
-  const loginTeacher = async ({ teacherCode, password }) => {
-const response = await apiRequest('/auth/login', {
-  method: 'POST',
-  body: { role: 'teacher', teacherCode, password },
-});
+  setMfaCode(pendingCode);
+  setMfaToken(pendingToken);
+  setMfaPending(true);
 
-    const pendingCode = response?.mfaCode || '';
-    const pendingToken = response?.mfaToken || '';
+  setUser(
+    normalizeUser(response?.user, {
+      name: `Teacher ${teacherCode}`,
+      identifier: teacherCode,
+      role: 'teacher',
+    }),
+  );
 
-    setMfaCode(pendingCode);
-    setMfaToken(pendingToken);
-    setMfaPending(true);
+  if (pendingCode) {
+    console.log(`%c[MFA CODE]: ${pendingCode}`, 'color: #6366f1; font-weight: bold; font-size: 16px;');
+  }
 
-    setUser(
-      normalizeUser(response?.user, {
-        name: `Teacher ${teacherCode}`,
-        identifier: teacherCode,
-        role: 'teacher',
-      }),
-    );
+  return { success: true, mfaRequired: true };
+};
 
-    if (pendingCode) {
-      // Helpful in local/dev environments.
-      console.log(`%c[MFA CODE]: ${pendingCode}`, 'color: #6366f1; font-weight: bold; font-size: 16px;');
-    }
+// ADMIN LOGIN
+const loginAdmin = async ({ email, password }) => {
+  const response = await apiRequest('/auth/login', {
+    method: 'POST',
+    body: { role: 'admin', email, password },
+  });
 
-    return { success: true, mfaRequired: true };
-  };
+  const nextUser = normalizeUser(response?.user, {
+    name: email,
+    identifier: email,
+    role: 'admin',
+  });
 
+  setUser(nextUser);
+  setMfaPending(false);
+
+  if (response?.token) {
+    localStorage.setItem(TOKEN_KEY, response.token);
+    setToken(response.token);
+  }
+
+  return { success: true, role: 'admin' };
+};
   const verifyMfa = async (enteredCode) => {
     const response = await apiRequest('/auth/verify-mfa', {
       method: 'POST',
@@ -138,6 +160,7 @@ const response = await apiRequest('/auth/login', {
   const isAuthenticated = !!user && !mfaPending;
   const isTeacher = user?.role === 'teacher' && !mfaPending;
   const isStudent = user?.role === 'student';
+  const isAdmin = user?.role === 'admin';
 
   return (
     <AuthContext.Provider
@@ -146,12 +169,14 @@ const response = await apiRequest('/auth/login', {
         token,
         loginStudent,
         loginTeacher,
+        loginAdmin,
         verifyMfa,
         signup,
         logout,
         isAuthenticated,
         isTeacher,
         isStudent,
+        isAdmin,
         mfaPending,
         mfaCode,
       }}
