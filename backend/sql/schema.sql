@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS users (
   name VARCHAR(120) NOT NULL,
   email VARCHAR(190) NOT NULL UNIQUE,
   password_hash VARCHAR(255) NOT NULL,
-  role ENUM('student', 'teacher', 'admin') NOT NULL,
+role ENUM('student', 'teacher', 'admin') NOT NULL,
   student_id VARCHAR(20) UNIQUE,
   teacher_code VARCHAR(10) UNIQUE,
   department VARCHAR(120) DEFAULT 'Computer Science',
@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS projects (
   description TEXT NOT NULL,
   due_date DATE NULL,
   max_team_size INT NULL,
-  status ENUM('active', 'pending', 'reviewed', 'completed') DEFAULT 'pending',
+status ENUM('active', 'pending', 'reviewed', 'completed') DEFAULT 'pending',
   submissions_count INT DEFAULT 0,
   progress INT DEFAULT 0,
   created_by INT,
@@ -30,7 +30,6 @@ CREATE TABLE IF NOT EXISTS projects (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   CONSTRAINT fk_projects_user FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
 );
-
 CREATE TABLE IF NOT EXISTS project_assignments (
   id INT AUTO_INCREMENT PRIMARY KEY,
   project_id INT NOT NULL,

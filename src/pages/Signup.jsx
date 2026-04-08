@@ -38,7 +38,13 @@ export default function Signup() {
         password: form.password,
         role: form.role,
       });
-      navigate(form.role === 'teacher' ? '/teacher-dashboard' : form.role === 'admin' ? '/admin-dashboard' : '/student-dashboard');
+navigate(
+  form.role === 'teacher'
+    ? '/teacher-dashboard'
+    : form.role === 'admin'
+    ? '/admin-dashboard'
+    : '/student-dashboard'
+);
     } catch (error) {
       setSubmitError(error.message || 'Signup failed. Please try again.');
     }

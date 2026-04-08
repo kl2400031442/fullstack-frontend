@@ -2,6 +2,8 @@ import pool from '../config/db.js';
 import asyncHandler from '../utils/asyncHandler.js';
 
 export const getProjects = asyncHandler(async (req, res) => {
+// GET PROJECTS
+export const getProjects = asyncHandler(async (req, res) => {
   if (req.user.role === 'student') {
     const [rows] = await pool.query(
       `SELECT p.*, s.status AS submission_status
@@ -49,6 +51,8 @@ export const getProjects = asyncHandler(async (req, res) => {
   });
 });
 
+
+// CREATE PROJECT
 export const createProject = asyncHandler(async (req, res) => {
   const { title, description, dueDate, maxTeamSize, status, assignedStudentIds = [] } = req.body;
 
@@ -70,6 +74,9 @@ export const createProject = asyncHandler(async (req, res) => {
 
   const [rows] = await pool.query('SELECT * FROM projects WHERE id = ?', [projectId]);
   const project = rows[0];
+
+  res.status(201).json({ project });
+});
 
   res.status(201).json({
     project: {

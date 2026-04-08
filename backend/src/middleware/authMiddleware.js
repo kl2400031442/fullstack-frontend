@@ -21,5 +21,8 @@ export function teacherOrAdminOnly(req, res, next) {
   if (!['teacher', 'admin'].includes(req.user?.role)) {
     return res.status(403).json({ message: 'Only teachers/admins can perform this action.' });
   }
+  next();
+}
+  }
   return next();
 }
